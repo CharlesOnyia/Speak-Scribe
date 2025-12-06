@@ -37,16 +37,11 @@ export function VoiceReviewSection({
   const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showOriginal, setShowOriginal] = useState(false);
-
   const {
     isRecording,
     isTranscribing,
     transcript,
-    originalTranscript,
-    interimTranscript,
     detectedLanguage,
-    translatedFrom,
     error,
     isSupported,
     startRecording,
@@ -85,7 +80,6 @@ export function VoiceReviewSection({
   }, [error, toast, state]);
 
   const handleStartRecording = useCallback(() => {
-    setShowOriginal(false);
     startRecording();
   }, [startRecording]);
 
@@ -151,7 +145,6 @@ export function VoiceReviewSection({
     setInputMode("voice");
     setIsEditing(false);
     setRating(0);
-    setShowOriginal(false);
     resetCapture();
   };
 
@@ -160,11 +153,8 @@ export function VoiceReviewSection({
     setInputMode("voice");
     setIsEditing(false);
     setRating(0);
-    setShowOriginal(false);
     resetCapture();
   };
-
-  const displayText = showOriginal && originalTranscript ? originalTranscript : transcript;
 
   return (
     <Card className="w-full shadow-lg border-purple-100 dark:border-purple-900/30 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
@@ -329,19 +319,19 @@ export function VoiceReviewSection({
 
             {state === "review" && inputMode === "voice" && (
               <div className="space-y-6">
-                {translatedFrom && (
+                {detectedLanguage && detectedLanguage !== "English" && (
                   <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 text-center">
-                    Detected {translatedFrom} and translated to English
+                    Detected language: {detectedLanguage}
                   </div>
                 )}
                 <TranscriptionBox
-                  text={displayText}
+                  text={transcript}
                   onChange={setTranscript}
                   isEditing={isEditing}
-                  detectedLanguage={showOriginal ? translatedFrom || "English" : "English"}
-                  translatedFrom={translatedFrom || undefined}
-                  showOriginal={showOriginal}
-                  onToggleOriginal={originalTranscript ? () => setShowOriginal(!showOriginal) : undefined}
+                  detectedLanguage={detectedLanguage}
+                  translatedFrom={undefined}
+                  showOriginal={false}
+                  onToggleOriginal={undefined}
                 />
                 
                 <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
