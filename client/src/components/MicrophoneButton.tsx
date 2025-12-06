@@ -13,12 +13,12 @@ export function MicrophoneButton({ isRecording, onToggle, disabled }: Microphone
       <div className="relative">
         {isRecording && (
           <>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-400 to-pink-500 animate-ping opacity-30" />
-            <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-red-400 to-pink-500 animate-pulse opacity-20" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-400 to-pink-500 animate-ping opacity-30 pointer-events-none" />
+            <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-red-400 to-pink-500 animate-pulse opacity-20 pointer-events-none" />
           </>
         )}
         {!isRecording && !disabled && (
-          <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-50 blur-sm" />
+          <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-50 blur-sm pointer-events-none" />
         )}
         <Button
           size="icon"
@@ -28,7 +28,7 @@ export function MicrophoneButton({ isRecording, onToggle, disabled }: Microphone
           aria-label={isRecording ? "Stop recording" : "Start recording"}
           data-testid="button-microphone"
           className={`
-            relative w-16 h-16 md:w-20 md:h-20 rounded-full
+            relative z-10 w-16 h-16 md:w-20 md:h-20 rounded-full
             shadow-lg transition-all duration-200
             ${isRecording 
               ? 'bg-gradient-to-br from-red-500 to-pink-600 border-red-400 hover:from-red-600 hover:to-pink-700' 
