@@ -261,6 +261,22 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
         console.log(`[Speech] Speech detected`);
       };
       
+      recognition.onspeechend = () => {
+        console.log(`[Speech] Speech ended`);
+      };
+      
+      recognition.onsoundstart = () => {
+        console.log(`[Speech] Sound detected`);
+      };
+      
+      recognition.onsoundend = () => {
+        console.log(`[Speech] Sound ended`);
+      };
+      
+      recognition.onnomatch = () => {
+        console.log(`[Speech] No match found for speech`);
+      };
+      
       console.log(`[Speech] Initial start with lang: ${speechCode}`);
       recognition.start();
       
