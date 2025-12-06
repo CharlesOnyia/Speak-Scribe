@@ -4,17 +4,17 @@ import { VoiceReviewSection } from "@/components/VoiceReviewSection";
 import { ExistingReviews } from "@/components/ExistingReviews";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Mic } from "lucide-react";
+import headphonesImg from "@assets/generated_images/premium_wireless_headphones_product_photo.png";
 
-// todo: remove mock functionality
 const mockProduct = {
   name: "Premium Wireless Headphones Pro",
   category: "Electronics",
   rating: 4.6,
   reviewCount: 247,
   price: "$249.99",
+  imageUrl: headphonesImg,
 };
 
-// todo: remove mock functionality
 const mockReviews = [
   {
     id: "1",
@@ -52,7 +52,6 @@ export default function ProductReviewPage() {
     rating: number;
     language: string;
   }) => {
-    // todo: remove mock functionality - integrate with real API
     console.log("Submitting review:", review);
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
@@ -79,6 +78,7 @@ export default function ProductReviewPage() {
             rating={mockProduct.rating}
             reviewCount={mockProduct.reviewCount}
             price={mockProduct.price}
+            imageUrl={mockProduct.imageUrl}
           />
         </section>
 
