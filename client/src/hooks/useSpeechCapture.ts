@@ -210,6 +210,11 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error("Speech recognition error:", event.error);
         
+        if (!isRecordingRef.current || !recognitionRef.current) {
+          console.log("Recording stopped, ignoring error");
+          return;
+        }
+        
         if (event.error === "no-speech") {
           currentLanguageIndexRef.current = (currentLanguageIndexRef.current + 1) % SUPPORTED_LANGUAGES.length;
           if (recognitionRef.current && isRecordingRef.current) {
@@ -234,6 +239,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       };
 
       recognition.onend = () => {
+        console.log("Recognition onend, isRecording:", isRecordingRef.current, "recognitionRef:", !!recognitionRef.current);
         if (isRecordingRef.current && recognitionRef.current) {
           try {
             recognitionRef.current.start();
@@ -271,10 +277,18 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
   }, []);
 
   const stopRecording = useCallback(() => {
+    console.log("stopRecording called");
+    
     isRecordingRef.current = false;
     
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    const recognition = recognitionRef.current;
+    if (recognition) {
+      recognitionRef.current = null;
+      try {
+        recognition.abort();
+      } catch (e) {
+        console.log("Recognition abort error:", e);
+      }
     }
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -283,6 +297,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
 
     const finalTranscript = fullTranscriptRef.current.trim();
