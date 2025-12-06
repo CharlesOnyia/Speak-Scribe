@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+// Use gpt-4o-mini for cost-effective translation
 
 // Lazy initialization of OpenAI client
 let openaiClient: OpenAI | null = null;
@@ -17,16 +17,11 @@ function getOpenAIClient(): OpenAI {
   return openaiClient;
 }
 
-// Supported languages with their codes
+// Supported languages with their codes (English, Spanish, French only)
 const SUPPORTED_LANGUAGES: Record<string, string> = {
   en: "English",
-  fr: "French",
   es: "Spanish",
-  it: "Italian",
-  ar: "Arabic",
-  yo: "Yoruba",
-  ig: "Igbo",
-  pcm: "Nigerian Pidgin",
+  fr: "French",
 };
 
 interface TranscriptionResult {
@@ -84,7 +79,7 @@ async function translateToEnglish(text: string, sourceLanguage: string): Promise
   
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -98,7 +93,7 @@ Only output the translation, nothing else.`,
           content: text,
         },
       ],
-      max_completion_tokens: 2048,
+      max_tokens: 2048,
     });
 
     return response.choices[0].message.content || text;
@@ -118,7 +113,7 @@ export async function translateText(
   
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -132,7 +127,7 @@ Only output the translation, nothing else.`,
           content: text,
         },
       ],
-      max_completion_tokens: 2048,
+      max_tokens: 2048,
     });
 
     return response.choices[0].message.content || text;

@@ -23,32 +23,18 @@ interface UseSpeechCaptureReturn extends SpeechCaptureState {
 const LANGUAGE_CODES: Record<string, string> = {
   "en-US": "English",
   "en-GB": "English",
-  "en-NG": "English (Nigerian)",
-  "pcm": "Nigerian Pidgin",
-  "fr-FR": "French",
-  "fr": "French",
+  "en": "English",
   "es-ES": "Spanish",
   "es": "Spanish",
   "es-MX": "Spanish",
-  "it-IT": "Italian",
-  "it": "Italian",
-  "ig-NG": "Igbo",
-  "ig": "Igbo",
-  "yo-NG": "Yoruba",
-  "yo": "Yoruba",
-  "ar-SA": "Arabic",
-  "ar": "Arabic",
-  "ar-EG": "Arabic",
+  "fr-FR": "French",
+  "fr": "French",
 };
 
 const SUPPORTED_LANGUAGES = [
   { code: "en-US", name: "English" },
   { code: "es-ES", name: "Spanish" },
   { code: "fr-FR", name: "French" },
-  { code: "it-IT", name: "Italian" },
-  { code: "ar-SA", name: "Arabic" },
-  { code: "yo-NG", name: "Yoruba" },
-  { code: "ig-NG", name: "Igbo" },
 ];
 
 const MAX_RETRY_ATTEMPTS = 3;

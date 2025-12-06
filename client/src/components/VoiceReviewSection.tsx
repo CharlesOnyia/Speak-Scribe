@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MicrophoneButton } from "./MicrophoneButton";
@@ -11,11 +10,11 @@ import { RecordingTimer } from "./RecordingTimer";
 import { TranscriptionBox } from "./TranscriptionBox";
 import { ActionButtons } from "./ActionButtons";
 import { StarRating } from "./StarRating";
-import { MessageSquare, Keyboard, Mic, AlertCircle, Globe, User } from "lucide-react";
+import { MessageSquare, Keyboard, Mic, AlertCircle, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechCapture } from "@/hooks/useSpeechCapture";
 
-type ReviewState = "name_input" | "idle" | "recording" | "transcribing" | "review" | "submitted";
+type ReviewState = "idle" | "recording" | "transcribing" | "review" | "submitted";
 type InputMode = "voice" | "text";
 
 interface VoiceReviewSectionProps {
@@ -33,13 +32,12 @@ export function VoiceReviewSection({
   onSubmitReview 
 }: VoiceReviewSectionProps) {
   const { toast } = useToast();
-  const [state, setState] = useState<ReviewState>("name_input");
+  const [state, setState] = useState<ReviewState>("idle");
   const [inputMode, setInputMode] = useState<InputMode>("voice");
   const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
-  const [reviewerName, setReviewerName] = useState("");
 
   const {
     isRecording,
@@ -58,7 +56,7 @@ export function VoiceReviewSection({
   } = useSpeechCapture();
 
   useEffect(() => {
-    if (state === "name_input" || state === "submitted") {
+    if (state === "submitted") {
       return;
     }
     
@@ -85,18 +83,6 @@ export function VoiceReviewSection({
       }
     }
   }, [error, toast, state]);
-
-  const handleNameSubmit = () => {
-    if (!reviewerName.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter your name to continue.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setState("idle");
-  };
 
   const handleStartRecording = useCallback(() => {
     setShowOriginal(false);
@@ -138,7 +124,7 @@ export function VoiceReviewSection({
           text: transcript,
           rating,
           language: detectedLanguage,
-          reviewerName: reviewerName.trim(),
+          reviewerName: "",
         });
       } else {
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -147,7 +133,7 @@ export function VoiceReviewSection({
       setState("submitted");
       toast({
         title: "Review submitted",
-        description: `Thank you, ${reviewerName}! Your feedback has been recorded.`,
+        description: "Thank you! Your feedback has been recorded.",
       });
     } catch {
       toast({
@@ -170,12 +156,11 @@ export function VoiceReviewSection({
   };
 
   const handleNewReview = () => {
-    setState("name_input");
+    setState("idle");
     setInputMode("voice");
     setIsEditing(false);
     setRating(0);
     setShowOriginal(false);
-    setReviewerName("");
     resetCapture();
   };
 
@@ -200,43 +185,12 @@ export function VoiceReviewSection({
       <Separator />
       
       <CardContent className="pt-6 space-y-6">
-        {!isSupported && inputMode === "voice" && state !== "name_input" && (
+        {!isSupported && inputMode === "voice" && (
           <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 rounded-md">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <p className="text-sm">
               Voice recording is not supported in your browser. Please use Chrome, Edge, or Safari, or type your review instead.
             </p>
-          </div>
-        )}
-
-        {state === "name_input" && (
-          <div className="space-y-6">
-            <div className="text-center py-4">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 mb-4">
-                <User className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="text-lg font-medium text-foreground">Welcome!</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                What's your name?
-              </p>
-            </div>
-            <div className="space-y-4">
-              <Input
-                placeholder="Enter your name"
-                value={reviewerName}
-                onChange={(e) => setReviewerName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()}
-                className="text-center"
-                data-testid="input-reviewer-name"
-              />
-              <Button 
-                onClick={handleNameSubmit} 
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                data-testid="button-start-review"
-              >
-                Start Review
-              </Button>
-            </div>
           </div>
         )}
 
@@ -246,7 +200,7 @@ export function VoiceReviewSection({
               <MessageSquare className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h3 className="text-lg font-medium text-foreground">Thank You, {reviewerName}!</h3>
+              <h3 className="text-lg font-medium text-foreground">Thank You!</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Your review has been submitted successfully.
               </p>
@@ -263,14 +217,8 @@ export function VoiceReviewSection({
           </div>
         )}
 
-        {state !== "name_input" && state !== "submitted" && (
+        {state !== "submitted" && (
           <>
-            {reviewerName && (
-              <div className="text-sm text-muted-foreground text-center pb-2">
-                Reviewing as <span className="font-medium text-foreground">{reviewerName}</span>
-              </div>
-            )}
-            
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
                 Your Rating
@@ -333,7 +281,7 @@ export function VoiceReviewSection({
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="max-w-xs">
                         <p className="text-xs">
-                          Supports English, Spanish, French, Italian, Arabic, Yoruba, Igbo, and Nigerian Pidgin
+                          Supports English, Spanish, and French
                         </p>
                       </TooltipContent>
                     </Tooltip>
