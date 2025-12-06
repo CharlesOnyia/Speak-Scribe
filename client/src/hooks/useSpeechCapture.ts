@@ -60,6 +60,7 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const fullTranscriptRef = useRef("");
+  const interimTranscriptRef = useRef("");
   const isRecordingRef = useRef(false);
   const selectedLanguageRef = useRef(selectedLanguage);
 
@@ -122,6 +123,7 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
       
       audioChunksRef.current = [];
       fullTranscriptRef.current = "";
+      interimTranscriptRef.current = "";
       
       let mimeType = "audio/webm";
       if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -167,10 +169,13 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
           
           if (result.isFinal) {
             fullTranscriptRef.current += transcriptPart + " ";
+            interimTranscriptRef.current = "";
           } else {
             interimText += transcriptPart;
           }
         }
+
+        interimTranscriptRef.current = interimText;
 
         setState(prev => ({
           ...prev,
@@ -316,7 +321,21 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
       streamRef.current = null;
     }
 
-    const finalTranscript = fullTranscriptRef.current.trim();
+    const pendingInterim = interimTranscriptRef.current.trim();
+    let combinedTranscript = fullTranscriptRef.current.trim();
+    
+    if (pendingInterim) {
+      console.log(`[Speech] Including pending interim text: "${pendingInterim}"`);
+      if (combinedTranscript) {
+        combinedTranscript += " " + pendingInterim;
+      } else {
+        combinedTranscript = pendingInterim;
+      }
+    }
+    
+    const finalTranscript = combinedTranscript;
+    interimTranscriptRef.current = "";
+    
     const currentLang = selectedLanguageRef.current;
     const langName = getLanguageName(currentLang);
 
@@ -410,6 +429,7 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
     }
 
     fullTranscriptRef.current = "";
+    interimTranscriptRef.current = "";
 
     setState(prev => ({
       isRecording: false,
