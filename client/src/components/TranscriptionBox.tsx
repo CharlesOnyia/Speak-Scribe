@@ -1,7 +1,5 @@
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { LanguageIndicator } from "./LanguageIndicator";
-import { ArrowLeftRight } from "lucide-react";
+import { Globe } from "lucide-react";
 
 interface TranscriptionBoxProps {
   text: string;
@@ -18,7 +16,7 @@ export function TranscriptionBox({
   text,
   onChange,
   isEditing,
-  detectedLanguage = "Auto-detect",
+  detectedLanguage = "English",
   translatedFrom,
   placeholder = "Your review will appear here...",
   showOriginal = false,
@@ -30,27 +28,19 @@ export function TranscriptionBox({
         <label className="text-sm font-medium text-foreground">
           Your Review
         </label>
-        <div className="flex items-center gap-2 flex-wrap">
-          {translatedFrom && onToggleOriginal && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleOriginal}
-              className="text-xs gap-1.5"
-              data-testid="button-toggle-language"
-            >
-              <ArrowLeftRight className="h-3 w-3" />
-              {showOriginal ? `View English` : `View ${translatedFrom}`}
-            </Button>
-          )}
-          {text && (
-            <LanguageIndicator
-              detectedLanguage={detectedLanguage}
-              translatedFrom={showOriginal ? undefined : translatedFrom}
-              showTranslation={!showOriginal && !!translatedFrom}
-            />
-          )}
-        </div>
+        {translatedFrom && onToggleOriginal && (
+          <button
+            onClick={onToggleOriginal}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="button-toggle-language"
+          >
+            <Globe className="h-3.5 w-3.5" />
+            {showOriginal 
+              ? `View English` 
+              : `View Original (${translatedFrom})`
+            }
+          </button>
+        )}
       </div>
       <Textarea
         value={text}

@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 import { ProductHeader } from "@/components/ProductHeader";
 import { VoiceReviewSection } from "@/components/VoiceReviewSection";
@@ -5,6 +6,18 @@ import { ExistingReviews } from "@/components/ExistingReviews";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Mic } from "lucide-react";
 import headphonesImg from "@assets/generated_images/premium_wireless_headphones_product_photo.png";
+
+interface Review {
+  id: string;
+  author: string;
+  rating: number;
+  text: string;
+  originalText?: string;
+  date: string;
+  helpful: number;
+  translatedFrom?: string;
+  isNew?: boolean;
+}
 
 const mockProduct = {
   name: "Premium Wireless Headphones Pro",
@@ -15,7 +28,7 @@ const mockProduct = {
   imageUrl: headphonesImg,
 };
 
-const mockReviews = [
+const initialReviews: Review[] = [
   {
     id: "1",
     author: "Sarah Miller",
@@ -47,13 +60,41 @@ const mockReviews = [
 ];
 
 export default function ProductReviewPage() {
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  const reviewsSectionRef = useRef<HTMLDivElement>(null);
+
   const handleSubmitReview = async (review: {
     text: string;
     rating: number;
     language: string;
   }) => {
     console.log("Submitting review:", review);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    const newReview: Review = {
+      id: `new-${Date.now()}`,
+      author: "You",
+      rating: review.rating,
+      text: review.text,
+      date: new Date().toLocaleDateString("en-US", { 
+        month: "long", 
+        day: "numeric", 
+        year: "numeric" 
+      }),
+      helpful: 0,
+      isNew: true,
+    };
+    
+    setReviews(prev => [newReview, ...prev]);
+  };
+
+  const scrollToReviews = () => {
+    setTimeout(() => {
+      reviewsSectionRef.current?.scrollIntoView({ 
+        behavior: "smooth", 
+        block: "start" 
+      });
+    }, 300);
   };
 
   return (
@@ -87,14 +128,17 @@ export default function ProductReviewPage() {
         <section className="max-w-2xl mx-auto">
           <VoiceReviewSection
             productName={mockProduct.name}
-            onSubmitReview={handleSubmitReview}
+            onSubmitReview={async (review) => {
+              await handleSubmitReview(review);
+              scrollToReviews();
+            }}
           />
         </section>
 
         <Separator />
 
-        <section className="max-w-2xl mx-auto pb-8">
-          <ExistingReviews reviews={mockReviews} />
+        <section ref={reviewsSectionRef} className="max-w-2xl mx-auto pb-8">
+          <ExistingReviews reviews={reviews} />
         </section>
       </main>
 

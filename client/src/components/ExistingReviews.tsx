@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Star, Languages, ThumbsUp, ArrowLeftRight } from "lucide-react";
+import { Star, Globe, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Review {
@@ -15,6 +14,7 @@ interface Review {
   helpful: number;
   language?: string;
   translatedFrom?: string;
+  isNew?: boolean;
 }
 
 interface ExistingReviewsProps {
@@ -25,10 +25,12 @@ function ReviewCard({ review }: { review: Review }) {
   const [showOriginal, setShowOriginal] = useState(false);
   
   const displayText = showOriginal && review.originalText ? review.originalText : review.text;
-  const displayLanguage = showOriginal ? review.translatedFrom : "English";
   
   return (
-    <Card data-testid={`card-review-${review.id}`}>
+    <Card 
+      data-testid={`card-review-${review.id}`}
+      className={review.isNew ? "ring-2 ring-primary/20 bg-primary/5" : ""}
+    >
       <CardContent className="pt-4 space-y-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -38,9 +40,14 @@ function ReviewCard({ review }: { review: Review }) {
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium text-foreground" data-testid={`text-author-${review.id}`}>
-                {review.author}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-foreground" data-testid={`text-author-${review.id}`}>
+                  {review.author}
+                </p>
+                {review.isNew && (
+                  <span className="text-xs text-primary font-medium">Your review</span>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">{review.date}</p>
             </div>
           </div>
@@ -65,40 +72,31 @@ function ReviewCard({ review }: { review: Review }) {
         <div className="flex items-center justify-between gap-4 flex-wrap pt-2">
           <div className="flex items-center gap-2 flex-wrap">
             {review.translatedFrom && review.originalText && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setShowOriginal(!showOriginal)}
-                className="text-xs gap-1.5"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 data-testid={`button-toggle-lang-${review.id}`}
               >
-                <ArrowLeftRight className="h-3 w-3" />
-                {showOriginal ? "View English" : `View ${review.translatedFrom}`}
-              </Button>
-            )}
-            {review.translatedFrom && !showOriginal && (
-              <Badge variant="secondary" className="gap-1 text-xs">
-                <Languages className="h-3 w-3" />
-                Translated from {review.translatedFrom}
-              </Badge>
-            )}
-            {showOriginal && (
-              <Badge variant="secondary" className="gap-1 text-xs">
-                <Languages className="h-3 w-3" />
-                Original ({review.translatedFrom})
-              </Badge>
+                <Globe className="h-3.5 w-3.5" />
+                {showOriginal 
+                  ? `View English` 
+                  : `View Original (${review.translatedFrom})`
+                }
+              </button>
             )}
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-muted-foreground"
-            onClick={() => console.log(`Helpful clicked for review ${review.id}`)}
-            data-testid={`button-helpful-${review.id}`}
-          >
-            <ThumbsUp className="h-4 w-4 mr-1" />
-            Helpful ({review.helpful})
-          </Button>
+          {!review.isNew && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => console.log(`Helpful clicked for review ${review.id}`)}
+              data-testid={`button-helpful-${review.id}`}
+            >
+              <ThumbsUp className="h-4 w-4 mr-1" />
+              Helpful ({review.helpful})
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -114,9 +112,16 @@ export function ExistingReviews({ reviews }: ExistingReviewsProps) {
     );
   }
 
+  const reviewCount = reviews.filter(r => !r.isNew).length;
+  const hasNewReview = reviews.some(r => r.isNew);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-foreground">Customer Reviews</h3>
+      <p className="text-sm text-muted-foreground">
+        {reviewCount} review{reviewCount !== 1 ? 's' : ''} from our customers
+        {hasNewReview && " (plus your new review)"}
+      </p>
       <div className="space-y-4">
         {reviews.map((review) => (
           <ReviewCard key={review.id} review={review} />
