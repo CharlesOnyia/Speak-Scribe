@@ -1,5 +1,7 @@
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { LanguageIndicator } from "./LanguageIndicator";
+import { ArrowLeftRight } from "lucide-react";
 
 interface TranscriptionBoxProps {
   text: string;
@@ -8,6 +10,8 @@ interface TranscriptionBoxProps {
   detectedLanguage?: string;
   translatedFrom?: string;
   placeholder?: string;
+  showOriginal?: boolean;
+  onToggleOriginal?: () => void;
 }
 
 export function TranscriptionBox({
@@ -17,6 +21,8 @@ export function TranscriptionBox({
   detectedLanguage = "Auto-detect",
   translatedFrom,
   placeholder = "Your review will appear here...",
+  showOriginal = false,
+  onToggleOriginal,
 }: TranscriptionBoxProps) {
   return (
     <div className="space-y-2">
@@ -24,13 +30,27 @@ export function TranscriptionBox({
         <label className="text-sm font-medium text-foreground">
           Your Review
         </label>
-        {text && (
-          <LanguageIndicator
-            detectedLanguage={detectedLanguage}
-            translatedFrom={translatedFrom}
-            showTranslation={!!translatedFrom}
-          />
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {translatedFrom && onToggleOriginal && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleOriginal}
+              className="text-xs gap-1.5"
+              data-testid="button-toggle-language"
+            >
+              <ArrowLeftRight className="h-3 w-3" />
+              {showOriginal ? `View English` : `View ${translatedFrom}`}
+            </Button>
+          )}
+          {text && (
+            <LanguageIndicator
+              detectedLanguage={detectedLanguage}
+              translatedFrom={showOriginal ? undefined : translatedFrom}
+              showTranslation={!showOriginal && !!translatedFrom}
+            />
+          )}
+        </div>
       </div>
       <Textarea
         value={text}
