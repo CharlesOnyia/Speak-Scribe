@@ -3,11 +3,20 @@ import { Mic, Square } from "lucide-react";
 
 interface MicrophoneButtonProps {
   isRecording: boolean;
-  onToggle: () => void;
+  onStart: () => void;
+  onStop: () => void;
   disabled?: boolean;
 }
 
-export function MicrophoneButton({ isRecording, onToggle, disabled }: MicrophoneButtonProps) {
+export function MicrophoneButton({ isRecording, onStart, onStop, disabled }: MicrophoneButtonProps) {
+  const handleClick = () => {
+    if (isRecording) {
+      onStop();
+    } else {
+      onStart();
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative">
@@ -23,7 +32,7 @@ export function MicrophoneButton({ isRecording, onToggle, disabled }: Microphone
         <Button
           size="icon"
           variant={isRecording ? "destructive" : "default"}
-          onClick={onToggle}
+          onClick={handleClick}
           disabled={disabled}
           aria-label={isRecording ? "Stop recording" : "Start recording"}
           data-testid="button-microphone"

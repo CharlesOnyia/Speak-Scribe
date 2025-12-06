@@ -73,14 +73,14 @@ export function VoiceReviewSection({
     }
   }, [error, toast]);
 
-  const handleToggleRecording = useCallback(() => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-      setShowOriginal(false);
-    }
-  }, [isRecording, startRecording, stopRecording]);
+  const handleStartRecording = useCallback(() => {
+    setShowOriginal(false);
+    startRecording();
+  }, [startRecording]);
+
+  const handleStopRecording = useCallback(() => {
+    stopRecording();
+  }, [stopRecording]);
 
   const handleSwitchToText = () => {
     setInputMode("text");
@@ -231,7 +231,8 @@ export function VoiceReviewSection({
                 
                 <MicrophoneButton
                   isRecording={state === "recording"}
-                  onToggle={handleToggleRecording}
+                  onStart={handleStartRecording}
+                  onStop={handleStopRecording}
                   disabled={state === "transcribing" || !isSupported}
                 />
                 
@@ -321,7 +322,7 @@ export function VoiceReviewSection({
                 <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={handleToggleRecording}
+                      onClick={handleStartRecording}
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                       data-testid="button-record-again"
                     >
