@@ -65,8 +65,10 @@ export default function ProductReviewPage() {
 
   const handleSubmitReview = async (review: {
     text: string;
+    originalText?: string;
     rating: number;
     language: string;
+    translatedFrom?: string;
   }) => {
     console.log("Submitting review:", review);
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -76,12 +78,14 @@ export default function ProductReviewPage() {
       author: "You",
       rating: review.rating,
       text: review.text,
+      originalText: review.originalText,
       date: new Date().toLocaleDateString("en-US", { 
         month: "long", 
         day: "numeric", 
         year: "numeric" 
       }),
       helpful: 0,
+      translatedFrom: review.translatedFrom,
       isNew: true,
     };
     

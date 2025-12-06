@@ -208,11 +208,20 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
           return;
         }
         
-        try {
-          recognitionRef.current.start();
-        } catch {
-          // Recognition already started or stopped
-        }
+        // Use a longer delay for non-English locales to avoid rapid restart loops
+        // that can cause issues with Chrome's Web Speech API for non-English languages
+        const currentLang = selectedLanguageRef.current;
+        const restartDelay = currentLang === "en" ? 100 : 300;
+        
+        setTimeout(() => {
+          if (isRecordingRef.current && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch {
+              // Recognition already started or stopped
+            }
+          }
+        }, restartDelay);
       };
 
       recognition.start();

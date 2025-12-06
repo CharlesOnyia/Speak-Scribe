@@ -21,8 +21,10 @@ interface VoiceReviewSectionProps {
   productName?: string;
   onSubmitReview?: (review: {
     text: string;
+    originalText?: string;
     rating: number;
     language: string;
+    translatedFrom?: string;
     reviewerName: string;
   }) => Promise<void>;
 }
@@ -123,8 +125,10 @@ export function VoiceReviewSection({
       if (onSubmitReview) {
         await onSubmitReview({
           text: transcript,
+          originalText: translatedFrom && originalTranscript ? originalTranscript : undefined,
           rating,
           language: detectedLanguage,
+          translatedFrom: translatedFrom || undefined,
           reviewerName: "",
         });
       } else {
