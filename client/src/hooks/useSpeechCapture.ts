@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { translateToEnglish } from "@/lib/libreTranslate";
 
 interface SpeechCaptureState {
   isRecording: boolean;
   isTranscribing: boolean;
+  isTranslating: boolean;
   transcript: string;
   originalTranscript: string;
   interimTranscript: string;
@@ -15,7 +17,7 @@ interface SpeechCaptureState {
 
 interface UseSpeechCaptureReturn extends SpeechCaptureState {
   startRecording: () => void;
-  stopRecording: () => void;
+  stopRecording: () => Promise<void>;
   resetCapture: () => void;
   setTranscript: (text: string) => void;
 }
@@ -54,6 +56,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
   const [state, setState] = useState<SpeechCaptureState>({
     isRecording: false,
     isTranscribing: false,
+    isTranslating: false,
     transcript: "",
     originalTranscript: "",
     interimTranscript: "",
@@ -298,7 +301,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     }
   }, [clearRetryTimeout]);
 
-  const stopRecording = useCallback(() => {
+  const stopRecording = useCallback(async () => {
     isRecordingRef.current = false;
     
     clearRetryTimeout();
@@ -338,6 +341,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       isRecording: false,
       isTranscribing: false,
       transcript: finalTranscript || prev.transcript,
+      originalTranscript: finalTranscript || prev.transcript,
       interimTranscript: "",
       detectedLanguage: detectedLang,
     }));
@@ -348,6 +352,44 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       });
       const audioUrl = URL.createObjectURL(audioBlob);
       setState(prev => ({ ...prev, audioUrl }));
+    }
+
+    if (finalTranscript && finalTranscript.length > 0) {
+      setState(prev => ({ ...prev, isTranslating: true }));
+      
+      try {
+        const result = await translateToEnglish(finalTranscript);
+        
+        if (result.error) {
+          setState(prev => ({
+            ...prev,
+            isTranslating: false,
+            error: result.error,
+          }));
+        } else if (result.detectedLanguage && result.detectedLanguage !== "English") {
+          setState(prev => ({
+            ...prev,
+            isTranslating: false,
+            transcript: result.translatedText,
+            originalTranscript: finalTranscript,
+            translatedFrom: result.detectedLanguage,
+            detectedLanguage: result.detectedLanguage,
+          }));
+        } else {
+          setState(prev => ({
+            ...prev,
+            isTranslating: false,
+            translatedFrom: null,
+            detectedLanguage: "English",
+          }));
+        }
+      } catch (err) {
+        console.error("Translation error:", err);
+        setState(prev => ({
+          ...prev,
+          isTranslating: false,
+        }));
+      }
     }
   }, [clearRetryTimeout]);
 
@@ -390,6 +432,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     setState(prev => ({
       isRecording: false,
       isTranscribing: false,
+      isTranslating: false,
       transcript: "",
       originalTranscript: "",
       interimTranscript: "",

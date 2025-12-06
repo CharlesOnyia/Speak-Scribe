@@ -40,8 +40,11 @@ export function VoiceReviewSection({
   const {
     isRecording,
     isTranscribing,
+    isTranslating,
     transcript,
+    originalTranscript,
     detectedLanguage,
+    translatedFrom,
     error,
     isSupported,
     startRecording,
@@ -49,6 +52,8 @@ export function VoiceReviewSection({
     resetCapture,
     setTranscript,
   } = useSpeechCapture();
+  
+  const [showOriginal, setShowOriginal] = useState(false);
 
   useEffect(() => {
     if (state === "submitted") {
@@ -57,14 +62,14 @@ export function VoiceReviewSection({
     
     if (isRecording) {
       setState("recording");
-    } else if (isTranscribing) {
+    } else if (isTranscribing || isTranslating) {
       setState("transcribing");
     } else if (transcript && state !== "idle") {
       setState("review");
-    } else if (!isRecording && !isTranscribing && state === "recording") {
+    } else if (!isRecording && !isTranscribing && !isTranslating && state === "recording") {
       setState("idle");
     }
-  }, [isRecording, isTranscribing, transcript, state]);
+  }, [isRecording, isTranscribing, isTranslating, transcript, state]);
 
   useEffect(() => {
     if (error) {
@@ -145,6 +150,7 @@ export function VoiceReviewSection({
     setInputMode("voice");
     setIsEditing(false);
     setRating(0);
+    setShowOriginal(false);
     resetCapture();
   };
 
@@ -153,6 +159,7 @@ export function VoiceReviewSection({
     setInputMode("voice");
     setIsEditing(false);
     setRating(0);
+    setShowOriginal(false);
     resetCapture();
   };
 
@@ -239,7 +246,7 @@ export function VoiceReviewSection({
                   <div className="flex flex-col items-center gap-2 py-4">
                     <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <span className="text-sm text-muted-foreground">
-                      Processing your review...
+                      {isTranslating ? "Translating your review..." : "Processing your review..."}
                     </span>
                   </div>
                 )}
@@ -319,19 +326,19 @@ export function VoiceReviewSection({
 
             {state === "review" && inputMode === "voice" && (
               <div className="space-y-6">
-                {detectedLanguage && detectedLanguage !== "English" && (
+                {translatedFrom && (
                   <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 text-center">
-                    Detected language: {detectedLanguage}
+                    Translated from {translatedFrom} to English
                   </div>
                 )}
                 <TranscriptionBox
-                  text={transcript}
+                  text={showOriginal ? originalTranscript : transcript}
                   onChange={setTranscript}
                   isEditing={isEditing}
                   detectedLanguage={detectedLanguage}
-                  translatedFrom={undefined}
-                  showOriginal={false}
-                  onToggleOriginal={undefined}
+                  translatedFrom={translatedFrom || undefined}
+                  showOriginal={showOriginal}
+                  onToggleOriginal={translatedFrom ? () => setShowOriginal(!showOriginal) : undefined}
                 />
                 
                 <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
