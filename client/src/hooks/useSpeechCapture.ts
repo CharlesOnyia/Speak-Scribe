@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { translateToEnglish } from "@/lib/libreTranslate";
+import { translateToEnglish } from "@/lib/translate";
+import { getSpeechCodeByLanguage } from "@/components/LanguageSelector";
 
 interface SpeechCaptureState {
   isRecording: boolean;
@@ -15,6 +16,10 @@ interface SpeechCaptureState {
   audioUrl: string | null;
 }
 
+interface UseSpeechCaptureOptions {
+  selectedLanguage?: string;
+}
+
 interface UseSpeechCaptureReturn extends SpeechCaptureState {
   startRecording: () => void;
   stopRecording: () => Promise<void>;
@@ -22,37 +27,20 @@ interface UseSpeechCaptureReturn extends SpeechCaptureState {
   setTranscript: (text: string) => void;
 }
 
-const LANGUAGE_CODES: Record<string, string> = {
-  "en-US": "English",
-  "en-GB": "English",
-  "en": "English",
-  "es-ES": "Spanish",
-  "es": "Spanish",
-  "es-MX": "Spanish",
-  "fr-FR": "French",
-  "fr": "French",
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  es: "Spanish",
+  fr: "French",
 };
 
-const SUPPORTED_LANGUAGES = [
-  { code: "en-US", name: "English" },
-  { code: "es-ES", name: "Spanish" },
-  { code: "fr-FR", name: "French" },
-];
-
-const MAX_RETRY_ATTEMPTS = 3;
-
 function getLanguageName(langCode: string): string {
-  if (LANGUAGE_CODES[langCode]) {
-    return LANGUAGE_CODES[langCode];
-  }
   const baseLang = langCode.split("-")[0];
-  if (LANGUAGE_CODES[baseLang]) {
-    return LANGUAGE_CODES[baseLang];
-  }
-  return langCode;
+  return LANGUAGE_NAMES[baseLang] || langCode;
 }
 
-export function useSpeechCapture(): UseSpeechCaptureReturn {
+export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpeechCaptureReturn {
+  const { selectedLanguage = "en" } = options;
+  
   const [state, setState] = useState<SpeechCaptureState>({
     isRecording: false,
     isTranscribing: false,
@@ -71,19 +59,13 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  const currentLanguageIndexRef = useRef(0);
   const fullTranscriptRef = useRef("");
-  const detectedLangRef = useRef("English");
   const isRecordingRef = useRef(false);
-  const retryTimeoutRef = useRef<number | null>(null);
-  const retryCountRef = useRef(0);
+  const selectedLanguageRef = useRef(selectedLanguage);
 
-  const clearRetryTimeout = useCallback(() => {
-    if (retryTimeoutRef.current !== null) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
-  }, []);
+  useEffect(() => {
+    selectedLanguageRef.current = selectedLanguage;
+  }, [selectedLanguage]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -91,7 +73,6 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     setState(prev => ({ ...prev, isSupported }));
 
     return () => {
-      clearRetryTimeout();
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
@@ -102,7 +83,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, [clearRetryTimeout]);
+  }, []);
 
   const startRecording = useCallback(async () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -115,12 +96,10 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       return;
     }
 
-    clearRetryTimeout();
-    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch (e) {
+      } catch {
         // ignore
       }
       recognitionRef.current = null;
@@ -128,7 +107,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         mediaRecorderRef.current.stop();
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -143,9 +122,6 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       
       audioChunksRef.current = [];
       fullTranscriptRef.current = "";
-      detectedLangRef.current = "English";
-      currentLanguageIndexRef.current = 0;
-      retryCountRef.current = 0;
       
       let mimeType = "audio/webm";
       if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -175,20 +151,18 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
-      recognition.lang = SUPPORTED_LANGUAGES[0].code;
+      
+      const speechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
+      recognition.lang = speechCode;
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        retryCountRef.current = 0;
-        
         let interimText = "";
-        let finalText = "";
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           const transcriptPart = result[0].transcript;
           
           if (result.isFinal) {
-            finalText += transcriptPart + " ";
             fullTranscriptRef.current += transcriptPart + " ";
           } else {
             interimText += transcriptPart;
@@ -202,19 +176,6 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         }));
       };
 
-      recognition.onlanguagechange = ((event: Event) => {
-        const langEvent = event as SpeechRecognitionEvent;
-        if (langEvent.results && langEvent.results.length > 0) {
-          const detectedLang = recognition.lang;
-          const langName = getLanguageName(detectedLang);
-          detectedLangRef.current = langName;
-          setState(prev => ({
-            ...prev,
-            detectedLanguage: langName,
-          }));
-        }
-      }) as EventListener;
-
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (!isRecordingRef.current) {
           return;
@@ -225,15 +186,6 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         }
         
         if (event.error === "no-speech") {
-          retryCountRef.current++;
-          
-          if (retryCountRef.current >= MAX_RETRY_ATTEMPTS * SUPPORTED_LANGUAGES.length) {
-            setState(prev => ({
-              ...prev,
-              error: "No speech detected. Please try speaking louder or check your microphone.",
-            }));
-            return;
-          }
           return;
         }
         
@@ -256,27 +208,18 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
           return;
         }
         
-        clearRetryTimeout();
-        
-        retryTimeoutRef.current = window.setTimeout(() => {
-          if (!isRecordingRef.current || !recognitionRef.current) {
-            return;
-          }
-          
-          currentLanguageIndexRef.current = (currentLanguageIndexRef.current + 1) % SUPPORTED_LANGUAGES.length;
-          
-          try {
-            recognitionRef.current.lang = SUPPORTED_LANGUAGES[currentLanguageIndexRef.current].code;
-            recognitionRef.current.start();
-          } catch (e) {
-            // Recognition already started or stopped
-          }
-        }, 100);
+        try {
+          recognitionRef.current.start();
+        } catch {
+          // Recognition already started or stopped
+        }
       };
 
       recognition.start();
       
       isRecordingRef.current = true;
+      const langName = getLanguageName(selectedLanguageRef.current);
+      
       setState(prev => ({
         ...prev,
         isRecording: true,
@@ -287,7 +230,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         error: null,
         audioUrl: null,
         translatedFrom: null,
-        detectedLanguage: "English",
+        detectedLanguage: langName,
       }));
 
     } catch (err) {
@@ -299,12 +242,10 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         isRecording: false,
       }));
     }
-  }, [clearRetryTimeout]);
+  }, []);
 
   const stopRecording = useCallback(async () => {
     isRecordingRef.current = false;
-    
-    clearRetryTimeout();
     
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
@@ -315,7 +256,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         recognition.onerror = null;
         recognition.onresult = null;
         recognition.abort();
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -323,7 +264,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         mediaRecorderRef.current.stop();
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -334,7 +275,8 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     }
 
     const finalTranscript = fullTranscriptRef.current.trim();
-    const detectedLang = detectedLangRef.current;
+    const currentLang = selectedLanguageRef.current;
+    const langName = getLanguageName(currentLang);
 
     setState(prev => ({
       ...prev,
@@ -343,7 +285,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       transcript: finalTranscript || prev.transcript,
       originalTranscript: finalTranscript || prev.transcript,
       interimTranscript: "",
-      detectedLanguage: detectedLang,
+      detectedLanguage: langName,
     }));
 
     if (audioChunksRef.current.length > 0) {
@@ -354,11 +296,11 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       setState(prev => ({ ...prev, audioUrl }));
     }
 
-    if (finalTranscript && finalTranscript.length > 0) {
+    if (finalTranscript && finalTranscript.length > 0 && currentLang !== "en") {
       setState(prev => ({ ...prev, isTranslating: true }));
       
       try {
-        const result = await translateToEnglish(finalTranscript);
+        const result = await translateToEnglish(finalTranscript, currentLang);
         
         if (result.error) {
           setState(prev => ({
@@ -366,21 +308,19 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
             isTranslating: false,
             error: result.error,
           }));
-        } else if (result.detectedLanguage && result.detectedLanguage !== "English") {
+        } else if (result.translatedText) {
           setState(prev => ({
             ...prev,
             isTranslating: false,
             transcript: result.translatedText,
             originalTranscript: finalTranscript,
-            translatedFrom: result.detectedLanguage,
-            detectedLanguage: result.detectedLanguage,
+            translatedFrom: langName,
+            detectedLanguage: langName,
           }));
         } else {
           setState(prev => ({
             ...prev,
             isTranslating: false,
-            translatedFrom: null,
-            detectedLanguage: "English",
           }));
         }
       } catch (err) {
@@ -391,12 +331,10 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         }));
       }
     }
-  }, [clearRetryTimeout]);
+  }, []);
 
   const resetCapture = useCallback(() => {
     isRecordingRef.current = false;
-    
-    clearRetryTimeout();
     
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
@@ -407,7 +345,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         recognition.onerror = null;
         recognition.onresult = null;
         recognition.abort();
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -425,9 +363,6 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     }
 
     fullTranscriptRef.current = "";
-    detectedLangRef.current = "English";
-    currentLanguageIndexRef.current = 0;
-    retryCountRef.current = 0;
 
     setState(prev => ({
       isRecording: false,
@@ -442,7 +377,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       isSupported: prev.isSupported,
       audioUrl: null,
     }));
-  }, [state.audioUrl, clearRetryTimeout]);
+  }, [state.audioUrl]);
 
   const setTranscript = useCallback((text: string) => {
     setState(prev => ({ ...prev, transcript: text }));

@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MicrophoneButton } from "./MicrophoneButton";
 import { WaveformAnimation } from "./WaveformAnimation";
 import { RecordingTimer } from "./RecordingTimer";
 import { TranscriptionBox } from "./TranscriptionBox";
 import { ActionButtons } from "./ActionButtons";
 import { StarRating } from "./StarRating";
-import { MessageSquare, Keyboard, Mic, AlertCircle, Globe } from "lucide-react";
+import { LanguageSelector, getLanguageByCode } from "./LanguageSelector";
+import { MessageSquare, Keyboard, Mic, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechCapture } from "@/hooks/useSpeechCapture";
 
@@ -37,6 +37,8 @@ export function VoiceReviewSection({
   const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  
   const {
     isRecording,
     isTranscribing,
@@ -51,7 +53,7 @@ export function VoiceReviewSection({
     stopRecording,
     resetCapture,
     setTranscript,
-  } = useSpeechCapture();
+  } = useSpeechCapture({ selectedLanguage });
   
   const [showOriginal, setShowOriginal] = useState(false);
 
@@ -145,23 +147,17 @@ export function VoiceReviewSection({
     }
   };
 
-  const handleReset = () => {
-    setState("idle");
-    setInputMode("voice");
-    setIsEditing(false);
-    setRating(0);
-    setShowOriginal(false);
-    resetCapture();
-  };
-
   const handleNewReview = () => {
     setState("idle");
     setInputMode("voice");
     setIsEditing(false);
     setRating(0);
     setShowOriginal(false);
+    setSelectedLanguage("en");
     resetCapture();
   };
+
+  const currentLanguageName = getLanguageByCode(selectedLanguage).name;
 
   return (
     <Card className="w-full shadow-lg border-purple-100 dark:border-purple-900/30 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
@@ -230,6 +226,19 @@ export function VoiceReviewSection({
 
             {(state === "idle" || state === "recording" || state === "transcribing") && inputMode === "voice" && (
               <div className="flex flex-col items-center py-6 space-y-4">
+                {state === "idle" && (
+                  <div className="flex flex-col items-center gap-3 mb-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Select your language
+                    </label>
+                    <LanguageSelector
+                      selectedLanguage={selectedLanguage}
+                      onLanguageChange={setSelectedLanguage}
+                      disabled={!isSupported}
+                    />
+                  </div>
+                )}
+                
                 {state === "recording" && (
                   <div className="w-full max-w-xs space-y-4">
                     <div className="flex justify-center">
@@ -237,7 +246,7 @@ export function VoiceReviewSection({
                     </div>
                     <WaveformAnimation isActive={true} />
                     <p className="text-xs text-center text-muted-foreground">
-                      Speak in any language - we'll transcribe it for you
+                      Recording in {currentLanguageName}...
                     </p>
                   </div>
                 )}
@@ -265,23 +274,6 @@ export function VoiceReviewSection({
                         ? "Tap to start recording your review"
                         : "Voice recording unavailable"}
                     </p>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-                          data-testid="button-language-info"
-                        >
-                          <Globe className="h-3 w-3" />
-                          <span>Multilingual support</span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="max-w-xs">
-                        <p className="text-xs">
-                          Supports English, Spanish, and French
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
                     <button
                       onClick={handleSwitchToText}
                       className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
