@@ -161,6 +161,9 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           const transcriptPart = result[0].transcript;
+          const confidence = result[0].confidence;
+          
+          console.log(`[Speech] Result: "${transcriptPart}" (confidence: ${confidence?.toFixed(2) || 'N/A'}, final: ${result.isFinal}, lang: ${speechCode})`);
           
           if (result.isFinal) {
             fullTranscriptRef.current += transcriptPart + " ";
@@ -177,6 +180,8 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.log(`[Speech] Error: ${event.error} (recording: ${isRecordingRef.current}, lang: ${speechCode})`);
+        
         if (!isRecordingRef.current) {
           return;
         }
@@ -193,6 +198,14 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
           return;
         }
         
+        if (event.error === "language-not-supported") {
+          setState(prev => ({
+            ...prev,
+            error: `Language ${speechCode} is not supported by your browser. Try using Chrome.`,
+          }));
+          return;
+        }
+        
         setState(prev => ({
           ...prev,
           error: `Speech recognition error: ${event.error}`,
@@ -200,6 +213,8 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
       };
 
       recognition.onend = () => {
+        console.log(`[Speech] Recognition ended (recording: ${isRecordingRef.current}, hasRef: ${!!recognitionRef.current}, lang: ${speechCode})`);
+        
         if (!isRecordingRef.current) {
           return;
         }
@@ -211,19 +226,37 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
         // Use a longer delay for non-English locales to avoid rapid restart loops
         // that can cause issues with Chrome's Web Speech API for non-English languages
         const currentLang = selectedLanguageRef.current;
-        const restartDelay = currentLang === "en" ? 100 : 300;
+        const restartDelay = currentLang === "en" ? 100 : 500;
+        
+        console.log(`[Speech] Restarting recognition in ${restartDelay}ms for ${currentLang}`);
         
         setTimeout(() => {
           if (isRecordingRef.current && recognitionRef.current) {
             try {
+              const newSpeechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
+              recognitionRef.current.lang = newSpeechCode;
+              console.log(`[Speech] Starting recognition with lang: ${newSpeechCode}`);
               recognitionRef.current.start();
-            } catch {
-              // Recognition already started or stopped
+            } catch (e) {
+              console.log(`[Speech] Restart failed:`, e);
             }
           }
         }, restartDelay);
       };
 
+      recognition.onstart = () => {
+        console.log(`[Speech] Recognition started successfully with lang: ${speechCode}`);
+      };
+      
+      recognition.onaudiostart = () => {
+        console.log(`[Speech] Audio capture started`);
+      };
+      
+      recognition.onspeechstart = () => {
+        console.log(`[Speech] Speech detected`);
+      };
+      
+      console.log(`[Speech] Initial start with lang: ${speechCode}`);
       recognition.start();
       
       isRecordingRef.current = true;
@@ -306,10 +339,12 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
     }
 
     if (finalTranscript && finalTranscript.length > 0 && currentLang !== "en") {
+      console.log(`[Translation] Starting translation from ${currentLang} to English. Text: "${finalTranscript}"`);
       setState(prev => ({ ...prev, isTranslating: true }));
       
       try {
         const result = await translateToEnglish(finalTranscript, currentLang);
+        console.log(`[Translation] Result:`, result);
         
         if (result.error) {
           setState(prev => ({
@@ -333,13 +368,15 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
           }));
         }
       } catch (err) {
-        console.error("Translation error:", err);
+        console.error("[Translation] Error:", err);
         setState(prev => ({
           ...prev,
           isTranslating: false,
           error: "Translation failed. Your review is shown in the original language.",
         }));
       }
+    } else {
+      console.log(`[Translation] Skipping translation: transcript="${finalTranscript}", lang="${currentLang}"`);
     }
   }, []);
 
