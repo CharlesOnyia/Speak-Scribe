@@ -328,6 +328,7 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
         setState(prev => ({
           ...prev,
           isTranslating: false,
+          error: "Translation failed. Your review is shown in the original language.",
         }));
       }
     }
