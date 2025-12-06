@@ -152,26 +152,39 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
       
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
+      recognition.maxAlternatives = 3;
       
       const speechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
       recognition.lang = speechCode;
+      
+      console.log(`[Speech] Recognition config: continuous=${recognition.continuous}, interimResults=${recognition.interimResults}, lang=${recognition.lang}`);
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const handleResult = (event: SpeechRecognitionEvent) => {
         let interimText = "";
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
-          const transcriptPart = result[0].transcript;
-          const confidence = result[0].confidence;
           
-          console.log(`[Speech] Result: "${transcriptPart}" (confidence: ${confidence?.toFixed(2) || 'N/A'}, final: ${result.isFinal}, lang: ${speechCode})`);
+          let bestTranscript = "";
+          let bestConfidence = 0;
+          
+          for (let j = 0; j < result.length; j++) {
+            const alt = result[j];
+            console.log(`[Speech] Alt ${j}: "${alt.transcript}" (confidence: ${alt.confidence?.toFixed(2) || 'N/A'})`);
+            if (alt.confidence > bestConfidence || j === 0) {
+              bestTranscript = alt.transcript;
+              bestConfidence = alt.confidence || 0;
+            }
+          }
+          
+          const currentSpeechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
+          console.log(`[Speech] Best result: "${bestTranscript}" (confidence: ${bestConfidence?.toFixed(2) || 'N/A'}, final: ${result.isFinal}, lang: ${currentSpeechCode})`);
           
           if (result.isFinal) {
-            fullTranscriptRef.current += transcriptPart + " ";
+            fullTranscriptRef.current += bestTranscript + " ";
             interimTranscriptRef.current = "";
           } else {
-            interimText += transcriptPart;
+            interimText += bestTranscript;
           }
         }
 
@@ -184,8 +197,9 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
         }));
       };
 
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.log(`[Speech] Error: ${event.error} (recording: ${isRecordingRef.current}, lang: ${speechCode})`);
+      const handleError = (event: SpeechRecognitionErrorEvent) => {
+        const currentSpeechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
+        console.log(`[Speech] Error: ${event.error} (recording: ${isRecordingRef.current}, lang: ${currentSpeechCode})`);
         
         if (!isRecordingRef.current) {
           return;
@@ -206,7 +220,7 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
         if (event.error === "language-not-supported") {
           setState(prev => ({
             ...prev,
-            error: `Language ${speechCode} is not supported by your browser. Try using Chrome.`,
+            error: `Language ${currentSpeechCode} is not supported by your browser. Try using Chrome.`,
           }));
           return;
         }
@@ -217,8 +231,62 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
         }));
       };
 
-      recognition.onend = () => {
-        console.log(`[Speech] Recognition ended (recording: ${isRecordingRef.current}, hasRef: ${!!recognitionRef.current}, lang: ${speechCode})`);
+      const handleStart = () => {
+        const currentSpeechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
+        console.log(`[Speech] Recognition started successfully with lang: ${currentSpeechCode}`);
+      };
+      
+      const handleAudioStart = () => {
+        console.log(`[Speech] Audio capture started`);
+      };
+      
+      const handleSpeechStart = () => {
+        console.log(`[Speech] Speech detected`);
+      };
+      
+      const handleSpeechEnd = () => {
+        console.log(`[Speech] Speech ended`);
+      };
+      
+      const handleSoundStart = () => {
+        console.log(`[Speech] Sound detected`);
+      };
+      
+      const handleSoundEnd = () => {
+        console.log(`[Speech] Sound ended`);
+      };
+      
+      const handleNoMatch = () => {
+        console.log(`[Speech] No match found for speech`);
+      };
+
+      const createFreshRecognition = (): SpeechRecognition | null => {
+        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognitionAPI) return null;
+        
+        const newRecognition = new SpeechRecognitionAPI();
+        newRecognition.continuous = true;
+        newRecognition.interimResults = true;
+        newRecognition.maxAlternatives = 3;
+        newRecognition.lang = getSpeechCodeByLanguage(selectedLanguageRef.current);
+        
+        newRecognition.onresult = handleResult;
+        newRecognition.onerror = handleError;
+        newRecognition.onend = handleEnd;
+        newRecognition.onstart = handleStart;
+        newRecognition.onaudiostart = handleAudioStart;
+        newRecognition.onspeechstart = handleSpeechStart;
+        newRecognition.onspeechend = handleSpeechEnd;
+        newRecognition.onsoundstart = handleSoundStart;
+        newRecognition.onsoundend = handleSoundEnd;
+        newRecognition.onnomatch = handleNoMatch;
+        
+        return newRecognition;
+      };
+
+      const handleEnd = () => {
+        const currentSpeechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
+        console.log(`[Speech] Recognition ended (recording: ${isRecordingRef.current}, hasRef: ${!!recognitionRef.current}, lang: ${currentSpeechCode})`);
         
         if (!isRecordingRef.current) {
           return;
@@ -228,54 +296,56 @@ export function useSpeechCapture(options: UseSpeechCaptureOptions = {}): UseSpee
           return;
         }
         
-        // Use a longer delay for non-English locales to avoid rapid restart loops
-        // that can cause issues with Chrome's Web Speech API for non-English languages
         const currentLang = selectedLanguageRef.current;
-        const restartDelay = currentLang === "en" ? 100 : 500;
         
-        console.log(`[Speech] Restarting recognition in ${restartDelay}ms for ${currentLang}`);
-        
-        setTimeout(() => {
-          if (isRecordingRef.current && recognitionRef.current) {
+        if (currentLang === "fr") {
+          console.log(`[Speech] French: Creating fresh recognition instance`);
+          
+          setTimeout(() => {
+            if (!isRecordingRef.current) return;
+            
+            const newRecognition = createFreshRecognition();
+            if (!newRecognition) return;
+            
+            recognitionRef.current = newRecognition;
+            
             try {
-              const newSpeechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
-              recognitionRef.current.lang = newSpeechCode;
-              console.log(`[Speech] Starting recognition with lang: ${newSpeechCode}`);
-              recognitionRef.current.start();
+              console.log(`[Speech] Starting fresh French recognition with lang: ${newRecognition.lang}`);
+              newRecognition.start();
             } catch (e) {
-              console.log(`[Speech] Restart failed:`, e);
+              console.log(`[Speech] Fresh start failed:`, e);
             }
-          }
-        }, restartDelay);
+          }, 300);
+        } else {
+          const restartDelay = currentLang === "en" ? 100 : 500;
+          
+          console.log(`[Speech] Restarting recognition in ${restartDelay}ms for ${currentLang}`);
+          
+          setTimeout(() => {
+            if (isRecordingRef.current && recognitionRef.current) {
+              try {
+                const newSpeechCode = getSpeechCodeByLanguage(selectedLanguageRef.current);
+                recognitionRef.current.lang = newSpeechCode;
+                console.log(`[Speech] Starting recognition with lang: ${newSpeechCode}`);
+                recognitionRef.current.start();
+              } catch (e) {
+                console.log(`[Speech] Restart failed:`, e);
+              }
+            }
+          }, restartDelay);
+        }
       };
 
-      recognition.onstart = () => {
-        console.log(`[Speech] Recognition started successfully with lang: ${speechCode}`);
-      };
-      
-      recognition.onaudiostart = () => {
-        console.log(`[Speech] Audio capture started`);
-      };
-      
-      recognition.onspeechstart = () => {
-        console.log(`[Speech] Speech detected`);
-      };
-      
-      recognition.onspeechend = () => {
-        console.log(`[Speech] Speech ended`);
-      };
-      
-      recognition.onsoundstart = () => {
-        console.log(`[Speech] Sound detected`);
-      };
-      
-      recognition.onsoundend = () => {
-        console.log(`[Speech] Sound ended`);
-      };
-      
-      recognition.onnomatch = () => {
-        console.log(`[Speech] No match found for speech`);
-      };
+      recognition.onresult = handleResult;
+      recognition.onerror = handleError;
+      recognition.onend = handleEnd;
+      recognition.onstart = handleStart;
+      recognition.onaudiostart = handleAudioStart;
+      recognition.onspeechstart = handleSpeechStart;
+      recognition.onspeechend = handleSpeechEnd;
+      recognition.onsoundstart = handleSoundStart;
+      recognition.onsoundend = handleSoundEnd;
+      recognition.onnomatch = handleNoMatch;
       
       console.log(`[Speech] Initial start with lang: ${speechCode}`);
       recognition.start();
