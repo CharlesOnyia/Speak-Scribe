@@ -83,6 +83,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
   const currentLanguageIndexRef = useRef(0);
   const fullTranscriptRef = useRef("");
   const detectedLangRef = useRef("English");
+  const isRecordingRef = useRef(false);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -193,7 +194,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         
         if (event.error === "no-speech") {
           currentLanguageIndexRef.current = (currentLanguageIndexRef.current + 1) % SUPPORTED_LANGUAGES.length;
-          if (recognitionRef.current && state.isRecording) {
+          if (recognitionRef.current && isRecordingRef.current) {
             try {
               recognitionRef.current.lang = SUPPORTED_LANGUAGES[currentLanguageIndexRef.current].code;
               recognitionRef.current.start();
@@ -215,7 +216,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       };
 
       recognition.onend = () => {
-        if (state.isRecording && recognitionRef.current) {
+        if (isRecordingRef.current && recognitionRef.current) {
           try {
             recognitionRef.current.start();
           } catch (e) {
@@ -226,6 +227,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
 
       recognition.start();
       
+      isRecordingRef.current = true;
       setState(prev => ({
         ...prev,
         isRecording: true,
@@ -241,15 +243,18 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
 
     } catch (err) {
       console.error("Failed to start recording:", err);
+      isRecordingRef.current = false;
       setState(prev => ({
         ...prev,
         error: "Could not access microphone. Please check your permissions.",
         isRecording: false,
       }));
     }
-  }, [state.isRecording]);
+  }, []);
 
   const stopRecording = useCallback(() => {
+    isRecordingRef.current = false;
+    
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
@@ -284,6 +289,8 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
   }, []);
 
   const resetCapture = useCallback(() => {
+    isRecordingRef.current = false;
+    
     if (recognitionRef.current) {
       recognitionRef.current.abort();
     }
