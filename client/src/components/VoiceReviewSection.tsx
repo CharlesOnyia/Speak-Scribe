@@ -2,13 +2,14 @@ import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MicrophoneButton } from "./MicrophoneButton";
 import { WaveformAnimation } from "./WaveformAnimation";
 import { RecordingTimer } from "./RecordingTimer";
 import { TranscriptionBox } from "./TranscriptionBox";
 import { ActionButtons } from "./ActionButtons";
 import { StarRating } from "./StarRating";
-import { MessageSquare, Keyboard, Mic, AlertCircle } from "lucide-react";
+import { MessageSquare, Keyboard, Mic, AlertCircle, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechCapture } from "@/hooks/useSpeechCapture";
 
@@ -73,13 +74,13 @@ export function VoiceReviewSection({
   }, [error, toast]);
 
   const handleToggleRecording = useCallback(() => {
-    if (state === "idle" || state === "review") {
+    if (isRecording) {
+      stopRecording();
+    } else {
       startRecording();
       setShowOriginal(false);
-    } else if (state === "recording") {
-      stopRecording();
     }
-  }, [state, startRecording, stopRecording]);
+  }, [isRecording, startRecording, stopRecording]);
 
   const handleSwitchToText = () => {
     setInputMode("text");
@@ -145,11 +146,13 @@ export function VoiceReviewSection({
   const displayText = showOriginal && originalTranscript ? originalTranscript : transcript;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full shadow-lg border-purple-100 dark:border-purple-900/30 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
       <CardHeader className="space-y-1">
         <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-muted-foreground" />
-          <CardTitle className="text-lg font-semibold">Leave a Review</CardTitle>
+          <div className="p-1.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-md">
+            <MessageSquare className="h-4 w-4 text-white" />
+          </div>
+          <CardTitle className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">Leave a Review</CardTitle>
         </div>
         {productName && (
           <p className="text-sm text-muted-foreground">
@@ -239,9 +242,23 @@ export function VoiceReviewSection({
                         ? "Tap to start recording your review"
                         : "Voice recording unavailable"}
                     </p>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Supports English, French, Spanish, Italian, Arabic, Yoruba, Igbo, and Nigerian Pidgin
-                    </p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+                          data-testid="button-language-info"
+                        >
+                          <Globe className="h-3 w-3" />
+                          <span>Multilingual support</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs">
+                        <p className="text-xs">
+                          Supports English, French, Spanish, Italian, Arabic, Yoruba, Igbo, and Nigerian Pidgin
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                     <button
                       onClick={handleSwitchToText}
                       className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"

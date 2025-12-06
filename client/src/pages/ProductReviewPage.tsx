@@ -98,14 +98,14 @@ export default function ProductReviewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-purple-950/50 dark:via-background dark:to-pink-950/30">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-card/80 backdrop-blur-md border-b border-purple-100 dark:border-purple-900/30">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-primary rounded-md">
-              <Mic className="h-4 w-4 text-primary-foreground" />
+            <div className="p-1.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg shadow-md">
+              <Mic className="h-4 w-4 text-white" />
             </div>
-            <span className="font-semibold text-foreground">VoiceReview</span>
+            <span className="font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">VoiceReview</span>
           </div>
           <ThemeToggle />
         </div>
@@ -142,9 +142,12 @@ export default function ProductReviewPage() {
         </section>
       </main>
 
-      <footer className="border-t bg-muted/30">
+      <footer className="border-t border-purple-100 dark:border-purple-900/30 bg-white/50 dark:bg-card/50 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          <p>VoiceReview — Making feedback accessible for everyone</p>
+          <p className="flex items-center justify-center gap-1">
+            <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent font-medium">VoiceReview</span>
+            <span>— Making feedback accessible for everyone</span>
+          </p>
         </div>
       </footer>
     </div>

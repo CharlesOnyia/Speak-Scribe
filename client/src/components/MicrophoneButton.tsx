@@ -12,21 +12,34 @@ export function MicrophoneButton({ isRecording, onToggle, disabled }: Microphone
     <div className="flex flex-col items-center gap-3">
       <div className="relative">
         {isRecording && (
-          <div className="absolute inset-0 rounded-full bg-destructive/20 animate-pulse-ring" />
+          <>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-400 to-pink-500 animate-ping opacity-30" />
+            <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-red-400 to-pink-500 animate-pulse opacity-20" />
+          </>
+        )}
+        {!isRecording && !disabled && (
+          <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-50 blur-sm" />
         )}
         <Button
           size="icon"
           variant={isRecording ? "destructive" : "default"}
-          className="w-16 h-16 md:w-20 md:h-20 rounded-full shadow-lg transition-transform active:scale-95"
           onClick={onToggle}
           disabled={disabled}
           aria-label={isRecording ? "Stop recording" : "Start recording"}
           data-testid="button-microphone"
+          className={`
+            relative w-16 h-16 md:w-20 md:h-20 rounded-full
+            shadow-lg transition-all duration-200
+            ${isRecording 
+              ? 'bg-gradient-to-br from-red-500 to-pink-600 border-red-400 hover:from-red-600 hover:to-pink-700' 
+              : 'bg-gradient-to-br from-purple-500 to-pink-500 border-purple-400 hover:from-purple-600 hover:to-pink-600'
+            }
+          `}
         >
           {isRecording ? (
-            <Square className="h-6 w-6 md:h-8 md:w-8" />
+            <Square className="h-6 w-6 md:h-8 md:w-8 text-white" />
           ) : (
-            <Mic className="h-6 w-6 md:h-8 md:w-8" />
+            <Mic className="h-6 w-6 md:h-8 md:w-8 text-white" />
           )}
         </Button>
       </div>

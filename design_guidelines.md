@@ -1,13 +1,28 @@
 # Voice-to-Text Review Interface Design Guidelines
 
 ## Design Approach
-**Reference-Based**: Drawing inspiration from modern e-commerce platforms (Shopify, Etsy) combined with productivity tools (Linear, Notion) for clean, functional UI. Focus on clarity, accessibility, and seamless user flow.
+**Vibrant & Fun**: A playful, modern design with rich gradients and interactive elements. Inspired by consumer apps that feel approachable and engaging while maintaining accessibility and clarity.
+
+## Color Palette
+
+### Primary Colors (Purple/Pink Gradient Theme)
+- **Primary**: Purple (280, 85%, 60%) - Vibrant purple for main actions
+- **Secondary**: Pink tones (320, 70%) - Playful accent color
+- **Accent**: Golden yellow (45, 95%, 65%) - For highlights and emphasis
+
+### Background
+- **Light Mode**: Soft gradient from purple-50 via pink-50 to orange-50
+- **Dark Mode**: Deep purple tones (270, 30%, 8%) with subtle pink accents
+
+### Surface Colors
+- Cards use white/80% opacity with backdrop blur for a frosted glass effect
+- Borders use soft purple tones (purple-100 light, purple-900/30 dark)
 
 ## Core Design Principles
-1. **Functional Clarity**: Every state change must be immediately obvious
-2. **Progressive Disclosure**: Show complexity only when needed
-3. **Global Accessibility**: High contrast, clear iconography, multilingual support
-4. **Smooth Transitions**: Gentle state changes to reduce cognitive load
+1. **Playful Interactivity**: Buttons and elements have gradient backgrounds with subtle glow effects
+2. **Visual Delight**: Animations and transitions make the interface feel alive
+3. **Approachable Design**: Rounded corners, soft shadows, and friendly colors
+4. **Global Accessibility**: High contrast maintained despite colorful design
 
 ---
 
@@ -18,11 +33,13 @@
 - Emphasis: Inter Medium (500) for labels and buttons
 - Headers: Inter SemiBold (600) for section titles
 
+**Gradient Text**: Headers use gradient text (purple-600 to pink-600) for visual impact
+
 **Type Scale**:
 - Page title: text-2xl (24px)
-- Section headers: text-lg (18px)
+- Section headers: text-lg (18px) with gradient
 - Body/transcription text: text-base (16px)
-- Button labels: text-sm (14px) uppercase
+- Button labels: text-sm (14px)
 - Helper text: text-xs (12px)
 - Timer/metadata: text-sm tabular-nums
 
@@ -37,132 +54,102 @@
 - Icon margins: mr-2, ml-2
 
 **Container Structure**:
-- Max width: max-w-2xl (672px) for review section
-- Mobile: Full width with px-4 padding
-- Desktop: Centered with comfortable margins
+- Max width: max-w-4xl for page, max-w-2xl for review section
+- Background: Gradient (from-purple-50 via-pink-50 to-orange-50)
+- Cards: bg-white/80 with backdrop-blur-sm
 
 ---
 
 ## Component Specifications
 
-### 1. Review Section Container
-- Rounded card: rounded-xl
-- Subtle border treatment
-- Section padding: p-6 md:p-8
-- Vertical spacing between elements: space-y-6
+### 1. Header
+- Gradient logo icon (purple-500 to pink-500)
+- Brand name with gradient text
+- Frosted glass background (bg-white/80 backdrop-blur-md)
 
-### 2. Microphone Button (Idle State)
-- Large, prominent circular button (w-16 h-16 md:w-20 md:h-20)
-- Center-aligned with supporting text below
-- Icon: Heroicons microphone (solid variant)
-- Text: "Tap to Speak Your Review" - text-base, positioned mt-3
-- Shadow for depth
+### 2. Review Section Container
+- White card with 80% opacity and backdrop blur
+- Soft purple border (border-purple-100)
+- Shadow with purple tint (shadow-lg)
+- Gradient icon and title
 
-### 3. Recording State Interface
-**Waveform Animation Area**:
-- Full-width container: w-full h-24
-- Centered waveform bars (8-12 vertical bars)
-- Animated height variations using simple transform
-- Timer display: Positioned top-right, text-lg tabular-nums
+### 3. Microphone Button
+- Large circular button (w-16 h-16 md:w-20 md:h-20)
+- Gradient background (purple-500 to pink-500)
+- Subtle glow effect behind button
+- Recording state: Red-pink gradient with ping animation
+- Smooth transitions on hover/active
 
-**Stop Recording Button**:
-- Same size as initial microphone button
-- Icon changes to stop square (Heroicons stop)
-- Positioned center below waveform
-- "Tap to Stop" helper text
+### 4. Language Support
+- Subtle hint with Globe icon
+- Tooltip on hover showing supported languages
+- Non-intrusive, discoverable on demand
 
-### 4. Transcription Display
-**Text Box**:
-- Multi-line textarea: min-h-32 (128px)
-- Rounded: rounded-lg
-- Border treatment with focus states
-- Padding: p-4
-- Font: text-base with line-height-relaxed
-- Placeholder: "Your review will appear here..."
+### 5. Star Rating
+- Interactive stars with smooth transitions
+- Clear visual feedback on selection
 
-**Language Indicator**:
-- Positioned top-right of text box
-- Small pill badge: px-3 py-1 rounded-full
-- Icon (Heroicons language) + detected language
-- Translation preview below if applicable: text-sm italic
-
-### 5. Action Buttons
-**Edit Button**:
-- Secondary style (outline or ghost variant)
-- Icon: Heroicons pencil + "Edit Review"
-- Positioned left in button group
-
-**Submit Button**:
-- Primary emphasis (solid background)
-- Icon: Heroicons paper-airplane + "Submit Review"
-- Positioned right in button group
-
-**Button Group Layout**:
-- Flex container with gap-3
-- Mobile: Stack vertically (flex-col)
-- Desktop: Horizontal (flex-row justify-end)
-- Both buttons: px-6 py-3, rounded-lg
+### 6. Action Buttons
+- Primary button: Solid gradient or primary color
+- Secondary buttons: Ghost variant
+- Consistent sizing and spacing
 
 ---
 
-## State Management & Transitions
+## Animations & Interactions
 
-**Three Primary States**:
-
-1. **Idle**: Microphone button visible, encouraging CTA text
-2. **Recording**: Waveform animation active, timer running, stop button prominent
-3. **Review**: Transcription visible, language badge shown, edit/submit actions available
+**Microphone Button**:
+- Idle: Subtle purple glow behind button
+- Recording: Ping animation with red/pink gradient
+- Pulse effect for visual feedback
 
 **Transitions**:
-- Fade transitions between states: duration-300
-- Scale animations for button press: scale-95 on active
-- Smooth height adjustments for expanding text areas
+- Duration: 200ms for most interactions
+- Active state: scale-95 for press feedback
+- Hover: shadow-xl and color intensification
 
 ---
 
 ## Iconography
-**Library**: Heroicons (CDN link)
-- Microphone (solid): Recording trigger
-- Stop (solid): End recording
-- Language: Auto-detect indicator
-- Pencil: Edit action
-- Paper-airplane: Submit action
-- Check-circle: Success confirmation
+**Library**: Lucide React
+- Microphone: Recording trigger
+- Square: Stop recording
+- Globe: Language support indicator
+- MessageSquare: Review section icon
+- Keyboard: Text input toggle
 
 **Icon Sizing**:
-- Primary buttons: w-6 h-6
-- Helper icons: w-4 h-4
-- Success states: w-5 h-5
+- Primary buttons: w-6 h-6 to w-8 h-8
+- Header icons: w-4 h-4
+- Helper icons: w-3 h-3 to w-4 h-4
 
 ---
 
 ## Accessibility Features
-- High contrast text ratios (WCAG AA minimum)
-- Clear focus indicators on all interactive elements (ring-2 ring-offset-2)
-- ARIA labels for all icon-only buttons
-- Keyboard navigation support (tab order logical)
-- Screen reader announcements for state changes
-- Large touch targets for mobile (minimum 44x44px)
+- High contrast text ratios maintained
+- Clear focus indicators
+- ARIA labels for all interactive elements
+- Large touch targets (min 44x44px)
+- Keyboard navigation support
+- Screen reader announcements
 
 ---
 
 ## Responsive Behavior
 **Mobile (< 768px)**:
 - Full-width components
-- Stacked button layout
-- Larger touch targets (buttons at least h-12)
-- Generous spacing between elements
+- Stacked button layouts
+- Larger touch targets
 
 **Desktop (≥ 768px)**:
-- Constrained max-width for comfortable reading
+- Constrained max-width
 - Horizontal button arrangements
 - Slightly more compact spacing
 
 ---
 
-## Product Context Integration
-This review section should feel integrated within a product page:
-- Position below product details/images
-- Clear visual separation from product content
-- Consistent with overall e-commerce design language
-- Optional product reference thumbnail at top of review section
+## Dark Mode
+- Deep purple background tones
+- Cards with subtle transparency
+- Gradient text adjusts to lighter purple-400 to pink-400
+- Shadows use purple tints for cohesion
