@@ -43,13 +43,15 @@ const LANGUAGE_CODES: Record<string, string> = {
 
 const SUPPORTED_LANGUAGES = [
   { code: "en-US", name: "English" },
-  { code: "fr-FR", name: "French" },
   { code: "es-ES", name: "Spanish" },
+  { code: "fr-FR", name: "French" },
   { code: "it-IT", name: "Italian" },
   { code: "ar-SA", name: "Arabic" },
   { code: "yo-NG", name: "Yoruba" },
   { code: "ig-NG", name: "Igbo" },
 ];
+
+const MAX_RETRY_ATTEMPTS = 3;
 
 function getLanguageName(langCode: string): string {
   if (LANGUAGE_CODES[langCode]) {
@@ -84,6 +86,15 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
   const fullTranscriptRef = useRef("");
   const detectedLangRef = useRef("English");
   const isRecordingRef = useRef(false);
+  const retryTimeoutRef = useRef<number | null>(null);
+  const retryCountRef = useRef(0);
+
+  const clearRetryTimeout = useCallback(() => {
+    if (retryTimeoutRef.current !== null) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -91,6 +102,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     setState(prev => ({ ...prev, isSupported }));
 
     return () => {
+      clearRetryTimeout();
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
@@ -101,7 +113,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [clearRetryTimeout]);
 
   const startRecording = useCallback(async () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -114,10 +126,13 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       return;
     }
 
+    clearRetryTimeout();
+    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
       } catch (e) {
+        // ignore
       }
       recognitionRef.current = null;
     }
@@ -125,6 +140,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       try {
         mediaRecorderRef.current.stop();
       } catch (e) {
+        // ignore
       }
     }
     if (streamRef.current) {
@@ -140,6 +156,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       fullTranscriptRef.current = "";
       detectedLangRef.current = "English";
       currentLanguageIndexRef.current = 0;
+      retryCountRef.current = 0;
       
       let mimeType = "audio/webm";
       if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -172,6 +189,8 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       recognition.lang = SUPPORTED_LANGUAGES[0].code;
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
+        retryCountRef.current = 0;
+        
         let interimText = "";
         let finalText = "";
 
@@ -208,27 +227,28 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       }) as EventListener;
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error:", event.error);
+        if (!isRecordingRef.current) {
+          return;
+        }
         
-        if (!isRecordingRef.current || !recognitionRef.current) {
-          console.log("Recording stopped, ignoring error");
+        if (event.error === "aborted") {
           return;
         }
         
         if (event.error === "no-speech") {
-          currentLanguageIndexRef.current = (currentLanguageIndexRef.current + 1) % SUPPORTED_LANGUAGES.length;
-          if (recognitionRef.current && isRecordingRef.current) {
-            try {
-              recognitionRef.current.lang = SUPPORTED_LANGUAGES[currentLanguageIndexRef.current].code;
-              recognitionRef.current.start();
-            } catch (e) {
-              console.log("Continuing with current language");
-            }
+          retryCountRef.current++;
+          
+          if (retryCountRef.current >= MAX_RETRY_ATTEMPTS * SUPPORTED_LANGUAGES.length) {
+            setState(prev => ({
+              ...prev,
+              error: "No speech detected. Please try speaking louder or check your microphone.",
+            }));
+            return;
           }
           return;
         }
         
-        if (event.error === "aborted" || event.error === "network") {
+        if (event.error === "network") {
           return;
         }
         
@@ -239,14 +259,30 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       };
 
       recognition.onend = () => {
-        console.log("Recognition onend, isRecording:", isRecordingRef.current, "recognitionRef:", !!recognitionRef.current);
-        if (isRecordingRef.current && recognitionRef.current) {
+        if (!isRecordingRef.current) {
+          return;
+        }
+        
+        if (!recognitionRef.current) {
+          return;
+        }
+        
+        clearRetryTimeout();
+        
+        retryTimeoutRef.current = window.setTimeout(() => {
+          if (!isRecordingRef.current || !recognitionRef.current) {
+            return;
+          }
+          
+          currentLanguageIndexRef.current = (currentLanguageIndexRef.current + 1) % SUPPORTED_LANGUAGES.length;
+          
           try {
+            recognitionRef.current.lang = SUPPORTED_LANGUAGES[currentLanguageIndexRef.current].code;
             recognitionRef.current.start();
           } catch (e) {
-            console.log("Recognition ended");
+            // Recognition already started or stopped
           }
-        }
+        }, 100);
       };
 
       recognition.start();
@@ -274,25 +310,33 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
         isRecording: false,
       }));
     }
-  }, []);
+  }, [clearRetryTimeout]);
 
   const stopRecording = useCallback(() => {
-    console.log("stopRecording called");
-    
     isRecordingRef.current = false;
     
+    clearRetryTimeout();
+    
     const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    
     if (recognition) {
-      recognitionRef.current = null;
       try {
+        recognition.onend = null;
+        recognition.onerror = null;
+        recognition.onresult = null;
         recognition.abort();
       } catch (e) {
-        console.log("Recognition abort error:", e);
+        // ignore
       }
     }
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        // ignore
+      }
     }
     
     if (streamRef.current) {
@@ -319,19 +363,33 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       const audioUrl = URL.createObjectURL(audioBlob);
       setState(prev => ({ ...prev, audioUrl }));
     }
-  }, []);
+  }, [clearRetryTimeout]);
 
   const resetCapture = useCallback(() => {
     isRecordingRef.current = false;
     
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
+    clearRetryTimeout();
+    
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    
+    if (recognition) {
+      try {
+        recognition.onend = null;
+        recognition.onerror = null;
+        recognition.onresult = null;
+        recognition.abort();
+      } catch (e) {
+        // ignore
+      }
     }
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
     
     if (state.audioUrl) {
@@ -341,6 +399,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
     fullTranscriptRef.current = "";
     detectedLangRef.current = "English";
     currentLanguageIndexRef.current = 0;
+    retryCountRef.current = 0;
 
     setState(prev => ({
       isRecording: false,
@@ -354,7 +413,7 @@ export function useSpeechCapture(): UseSpeechCaptureReturn {
       isSupported: prev.isSupported,
       audioUrl: null,
     }));
-  }, [state.audioUrl]);
+  }, [state.audioUrl, clearRetryTimeout]);
 
   const setTranscript = useCallback((text: string) => {
     setState(prev => ({ ...prev, transcript: text }));
