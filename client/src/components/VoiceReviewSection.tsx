@@ -34,12 +34,16 @@ export function VoiceReviewSection({
   const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   const {
     isRecording,
     isTranscribing,
     transcript,
+    originalTranscript,
     interimTranscript,
+    detectedLanguage,
+    translatedFrom,
     error,
     isSupported,
     startRecording,
@@ -71,6 +75,7 @@ export function VoiceReviewSection({
   const handleToggleRecording = useCallback(() => {
     if (state === "idle" || state === "review") {
       startRecording();
+      setShowOriginal(false);
     } else if (state === "recording") {
       stopRecording();
     }
@@ -106,7 +111,7 @@ export function VoiceReviewSection({
         await onSubmitReview({
           text: transcript,
           rating,
-          language: "English",
+          language: detectedLanguage,
         });
       } else {
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -133,10 +138,11 @@ export function VoiceReviewSection({
     setInputMode("voice");
     setIsEditing(false);
     setRating(0);
+    setShowOriginal(false);
     resetCapture();
   };
 
-  const displayText = interimTranscript ? `${transcript} ${interimTranscript}`.trim() : transcript;
+  const displayText = showOriginal && originalTranscript ? originalTranscript : transcript;
 
   return (
     <Card className="w-full">
@@ -205,14 +211,9 @@ export function VoiceReviewSection({
                       <RecordingTimer isRecording={true} />
                     </div>
                     <WaveformAnimation isActive={true} />
-                    {(transcript || interimTranscript) && (
-                      <div className="text-center p-3 bg-muted rounded-md">
-                        <p className="text-sm text-foreground">
-                          {displayText}
-                          {interimTranscript && <span className="text-muted-foreground animate-pulse">...</span>}
-                        </p>
-                      </div>
-                    )}
+                    <p className="text-xs text-center text-muted-foreground">
+                      Speak in any language - we'll transcribe and translate it
+                    </p>
                   </div>
                 )}
                 
@@ -237,6 +238,9 @@ export function VoiceReviewSection({
                       {isSupported 
                         ? "Tap to start recording your review"
                         : "Voice recording unavailable"}
+                    </p>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Supports English, French, Spanish, Italian, Arabic, Yoruba, Igbo, and Nigerian Pidgin
                     </p>
                     <button
                       onClick={handleSwitchToText}
@@ -282,11 +286,19 @@ export function VoiceReviewSection({
 
             {state === "review" && inputMode === "voice" && (
               <div className="space-y-6">
+                {translatedFrom && (
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 text-center">
+                    Detected {translatedFrom} and translated to English
+                  </div>
+                )}
                 <TranscriptionBox
-                  text={transcript}
+                  text={displayText}
                   onChange={setTranscript}
                   isEditing={isEditing}
-                  detectedLanguage="English"
+                  detectedLanguage={showOriginal ? translatedFrom || "English" : "English"}
+                  translatedFrom={translatedFrom || undefined}
+                  showOriginal={showOriginal}
+                  onToggleOriginal={originalTranscript ? () => setShowOriginal(!showOriginal) : undefined}
                 />
                 
                 <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
